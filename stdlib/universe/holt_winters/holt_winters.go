@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/flux/array"
 	"github.com/influxdata/flux/arrow"
 	"github.com/influxdata/flux/internal/mutable"
+	"gonum.org/v1/gonum/optimize"
 )
 
 // HoltWinters forecasts a series into the future.
@@ -131,7 +132,26 @@ func (r *HoltWinters) Do(vs *array.Float) *array.Float {
 					initParams.Set(2, gamma)
 					initParams.Set(3, phi)
 					// Optimize creates new parameters every time it is called.
-					sse, newParams := r.optim.Optimize(r.sse, initParams, r.epsilon, 1)
+					// sse, newParams := r.optim.Optimize(r.sse, initParams, r.epsilon, 1)
+					problem := optimize.Problem{
+						Func: func(par []float64) float64 {
+							f := mutable.NewFloat64Array(r.alloc)
+							defer f.Release()
+							f.AppendValues(par)
+							return r.sse(f)
+						},
+					}
+
+					result, err := optimize.Minimize(problem, initParams.Float64Values(), &optimize.Settings{}, &optimize.NelderMead{})
+					if err != nil {
+						panic(err)
+					}
+
+					f := mutable.NewFloat64Array(r.alloc)
+					defer f.Release()
+					f.AppendValues(result.X)
+					sse, newParams := result.F, f
+
 					if sse < minSSE || bestParams == nil {
 						if bestParams != nil {
 							// Previous bestParams are not the best anymore. We can release them.

@@ -487,7 +487,7 @@ var sourceHashes = map[string]string{
 	"stdlib/universe/histogram_quantile_test.flux":                                                "3eef2f5ba3c047d624080942494699ca852be145573ae9c9c353fcd2609a66fa",
 	"stdlib/universe/histogram_test.flux":                                                         "a468e662ecf1adc1d9d035ff041a503cd08efe7354f096a88da12ff7edc347ef",
 	"stdlib/universe/holt_winters_panic_test.flux":                                                "c7681aadb9e4584b0002e47782af18c0c70734234c24adc0a631686cc3e32cb2",
-	"stdlib/universe/holt_winters_test.flux":                                                      "47a236ef553000fb36cdf2756d32a9a923a1b478a974c1369d08d8c6ba3535f9",
+	"stdlib/universe/holt_winters_test.flux":                                                      "c80026a15c54add4efc70d2c45fc8cf23201b12fe70b40043fa95be1398a2a48",
 	"stdlib/universe/hour_selection_test.flux":                                                    "b2eecf84519685941ce8fd7f873b4d85d5041c6aa5673a587f2db8cdc9c26ae3",
 	"stdlib/universe/increase_test.flux":                                                          "dc02027842468c99c3ff0dadadde6050a2e38c7ea4bd70c7cf0a7eb10e3f93d7",
 	"stdlib/universe/integral_test.flux":                                                          "d4cad5a17770da3224dc89b09a0d1e0382004f19ca60eb8cae338502885a60fb",
