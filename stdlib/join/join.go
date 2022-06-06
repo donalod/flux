@@ -82,6 +82,13 @@ func createJoinOpSpec(args flux.Arguments, p *flux.Administration) (flux.Operati
 		return nil, err
 	}
 
+	if method != "inner" && method != "left" && method != "right" && method != "full" {
+		return nil, errors.New(
+			codes.Invalid,
+			"invalid argument for 'method' - must be \"inner\", \"left\", \"right\", or \"full\"",
+		)
+	}
+
 	op := JoinOpSpec{
 		left:   left,
 		right:  right,
@@ -135,5 +142,10 @@ func createJoinTransformation(
 	spec plan.ProcedureSpec,
 	a execute.Administration,
 ) (execute.Transformation, execute.Dataset, error) {
-	return nil, nil, errors.New(codes.Invalid, "the join package is not yet implemented")
+	t, err := NewMergeJoinTransformation(id, spec, a)
+	if err != nil {
+		return nil, nil, err
+	}
+	tr := execute.NewTransformationFromTransport(t)
+	return tr, t.d, nil
 }
