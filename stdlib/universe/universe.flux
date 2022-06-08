@@ -4643,3 +4643,27 @@ toTime = (tables=<-) => tables |> map(fn: (r) => ({r with _value: time(v: r._val
 // tags: date/time
 //
 today = () => date.truncate(t: now(), unit: 1d)
+
+// yesterday returns the timestamp of the today() with a day subtracted from it.
+//
+// ## Examples
+//
+// ### Return a timestamp representing yesterday
+// ```no_run
+// option now = () => 2022-01-02T13:45:28Z
+//
+// yesterday()
+// // Returns 2022-01-01T00:00:00.000000000Z
+// ```
+//
+// ### Query data from yesterday
+// ```no_run
+// from(bucket: "example-bucket")
+//     |> range(start: yesterday())
+// ```
+//
+// ## Metadata
+// introduced: NEXT
+// tags: date/time
+
+yesterday = () => date.sub(d:1d, from:today())
