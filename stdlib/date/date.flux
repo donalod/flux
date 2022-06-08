@@ -773,3 +773,95 @@ November = 11
 
 // December is a constant that represents the month of December.
 December = 12
+
+
+// Monday will return the timestamp of the nearest monday truncated to the day
+// ## Parameters
+// - d: time.
+//
+// ## Examples
+//
+// ### Find the Monday of that week
+//
+// ```no_run
+// import "date"
+//
+// d = date.monday(d: 2022-05-10T10:10:00Z)
+//
+// // Returns 2022-05-08T00:00:00.000000000Z
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+monday = (d) => {
+    today_date = truncate(t: d, unit: 1d )
+    scaled_offset = scale(d: 1d, n: (weekDay(t: today_date) - 1))
+    return sub(d: scaled_offset, from: today_date)
+}
+
+
+
+// monthStart will return the timestamp of the start of the month truncated to the month
+// ## Parameters
+// - d: Timestamp to find the months start for.
+//
+// ## Examples
+//
+// ### Find the timestamp for the start of that month
+//
+// ```no_run
+// import "date"
+//
+// d = date.monthStart(d: 2022-05-10T10:10:00Z)
+//
+// // Returns 2022-05-01T00:00:00.000000000Z
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+monthStart = (d) => truncate(t: d, unit: 1mo)
+
+
+
+//week
+// weekStart will return the timestamp of the week start of a given timestamp truncated to the day
+// ## Parameters
+// - d: Timestamp to find the start of the week for.
+// - start_sunday: Boolean to represent if the month starts on a Sunday or Monday (defaults on Monday)
+//
+// ## Examples
+//
+// ### Find the timestamp for the start of that week with the week starting on Monday
+//
+// ```no_run
+// import "date"
+//
+// d = date.weekStart(d: 2022-05-10T10:10:00Z)
+//
+// // Returns 2022-05-09T00:00:00.000000000Z
+// ```
+// ### Find the timestamp for the start of that week with the week starting on Sunday
+// 
+// ```no_run
+// import "date"
+//
+// d = date.weekStart(d: 2022-05-10T10:10:00Z, start_sunday:true)
+//
+// // Returns 2022-05-08T00:00:00.000000000Z
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+weekStart = (d,start_sunday=false) => {
+  trunc = truncate(t:d, unit: 1d)
+  cur_day = weekDay(t:trunc)
+  ws = if start_sunday then 0 else 1
+  days_diff = scale(d:1d, n:(cur_day-ws))
+  return sub(d: days_diff, from: trunc)
+}
+
+
+
