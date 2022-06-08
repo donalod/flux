@@ -471,7 +471,7 @@ func (r joinRows) getRow(i int, typ semantic.MonoType) values.Object {
 	var obj values.Object
 	for _, chunk := range r {
 		if i > chunk.Len()-1 {
-			i -= chunk.Len() - 1
+			i -= chunk.Len()
 		} else {
 			obj = rowFromChunk(chunk, i, typ)
 			break
