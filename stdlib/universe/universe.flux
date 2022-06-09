@@ -4670,3 +4670,99 @@ yesterday = () => {
     ret = {start: (date.sub(d:1d, from:today())), stop: today()}
     return ret
 }
+
+
+// Monday will return the a record containing the start and the stopping point of the last monday
+// ## Parameters
+// - d: time.
+//
+// ## Examples
+//
+// ### Find the Monday of that week 
+//
+// ```no_run
+// import "date"
+//
+// d = date.monday(d: 2022-05-10T10:10:00Z)
+//
+// // Returns {start: 2022-05-08T00:00:00.000000000Z stop:2022-05-09T00:00:00.000000000Z }
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+monday = (d) => {
+    today_date = date.truncate(t: d, unit: 1d )
+    cur_day = date.weekDay(t: today_date)
+    scaled_offset = if cur_day == date.Monday then date.scale(d:1w, n: 1)  else date.scale(d: 1d, n: (cur_day - 1))
+    mon =  date.sub(d: scaled_offset, from: today_date)
+    ret = {start: mon, stop: date.add(d: 1d, to: mon)}
+    return ret
+}
+
+
+
+// monthStart will return the timestamps of the start and end of the month in a record
+// ## Parameters
+// - d: Timestamp to find the months start for.
+//
+// ## Examples
+//
+// ### Find the timestamps for the start and stopping point of that month
+//
+// ```no_run
+// import "date"
+//
+// d = date.monthStart(d: 2022-05-10T10:10:00Z)
+//
+// // Returns {start:2022-05-01T00:00:00.000000000Z, stop:2022-06-01T00:00:00.000000000Z}
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+monthStart = (d) => {
+  start = date.truncate(t: d, unit: 1mo)  
+  return {start: start, stop: date.add(d:1mo, to: start)}
+}
+
+
+
+//week
+// weekStart will return the timestamps of the week start of a given timestamp truncated to the day and the ending point of that week
+// ## Parameters
+// - d: Timestamp to find the start of the week for.
+// - start_sunday: Boolean to represent if the month starts on a Sunday or Monday (defaults on Monday)
+//
+// ## Examples
+//
+// ### Find the timestamps for the start and end of that week with the week starting on Monday
+//
+// ```no_run
+// import "date"
+//
+// d = date.weekStart(d: 2022-05-10T10:10:00Z)
+//
+// // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
+// ```
+// ### Find the timestamps for the start and end of that week with the week starting on Sunday 
+// 
+// ```no_run
+// import "date"
+//
+// d = date.weekStart(d: 2022-05-10T10:10:00Z, start_sunday:true)
+//
+// // Returns {start: 2022-05-08T00:00:00.000000000Z, stop: 2022-05-14T00:00:00.000000000Z}
+// ```
+//
+// ## Metadata
+// tags: date/time
+// 
+weekStart = (d,start_sunday=false) => {
+  trunc = date.truncate(t:d, unit: 1d)
+  cur_day = date.weekDay(t:trunc)
+  ws = if start_sunday then 0 else 1
+  days_diff = date.scale(d:1d, n:(cur_day-ws))
+  starting = date.sub(d: days_diff, from: trunc)
+  return {start: starting,  stop: date.add(d:1w, to: starting)}
+}
