@@ -775,20 +775,20 @@ November = 11
 December = 12
 
 
-// Monday will return the timestamp of the nearest monday truncated to the day
+// Monday will return the a record containing the start and the stopping point of the last monday
 // ## Parameters
 // - d: time.
 //
 // ## Examples
 //
-// ### Find the Monday of that week
+// ### Find the Monday of that week 
 //
 // ```no_run
 // import "date"
 //
 // d = date.monday(d: 2022-05-10T10:10:00Z)
 //
-// // Returns 2022-05-08T00:00:00.000000000Z
+// // Returns {start: 2022-05-08T00:00:00.000000000Z stop:2022-05-09T00:00:00.000000000Z }
 // ```
 //
 // ## Metadata
@@ -796,60 +796,66 @@ December = 12
 // 
 monday = (d) => {
     today_date = truncate(t: d, unit: 1d )
-    scaled_offset = scale(d: 1d, n: (weekDay(t: today_date) - 1))
-    return sub(d: scaled_offset, from: today_date)
+    cur_day = weekDay(t: today_date)
+    scaled_offset = if cur_day == Monday then scale(d:1w, n: 1)  else scale(d: 1d, n: (cur_day - 1))
+    mon =  sub(d: scaled_offset, from: today_date)
+    ret = {start: mon, stop: add(d: 1d, to: mon)}
+    return ret
 }
 
 
 
-// monthStart will return the timestamp of the start of the month truncated to the month
+// monthStart will return the timestamps of the start and end of the month in a record
 // ## Parameters
 // - d: Timestamp to find the months start for.
 //
 // ## Examples
 //
-// ### Find the timestamp for the start of that month
+// ### Find the timestamps for the start and stopping point of that month
 //
 // ```no_run
 // import "date"
 //
 // d = date.monthStart(d: 2022-05-10T10:10:00Z)
 //
-// // Returns 2022-05-01T00:00:00.000000000Z
+// // Returns {start:2022-05-01T00:00:00.000000000Z, stop:2022-06-01T00:00:00.000000000Z}
 // ```
 //
 // ## Metadata
 // tags: date/time
 // 
-monthStart = (d) => truncate(t: d, unit: 1mo)
+monthStart = (d) => {
+  start = truncate(t: d, unit: 1mo)  
+  return {start: start, stop: add(d:1mo, to: start)}
+}
 
 
 
 //week
-// weekStart will return the timestamp of the week start of a given timestamp truncated to the day
+// weekStart will return the timestamps of the week start of a given timestamp truncated to the day and the ending point of that week
 // ## Parameters
 // - d: Timestamp to find the start of the week for.
 // - start_sunday: Boolean to represent if the month starts on a Sunday or Monday (defaults on Monday)
 //
 // ## Examples
 //
-// ### Find the timestamp for the start of that week with the week starting on Monday
+// ### Find the timestamps for the start and end of that week with the week starting on Monday
 //
 // ```no_run
 // import "date"
 //
 // d = date.weekStart(d: 2022-05-10T10:10:00Z)
 //
-// // Returns 2022-05-09T00:00:00.000000000Z
+// // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
 // ```
-// ### Find the timestamp for the start of that week with the week starting on Sunday
+// ### Find the timestamps for the start and end of that week with the week starting on Sunday 
 // 
 // ```no_run
 // import "date"
 //
 // d = date.weekStart(d: 2022-05-10T10:10:00Z, start_sunday:true)
 //
-// // Returns 2022-05-08T00:00:00.000000000Z
+// // Returns {start: 2022-05-08T00:00:00.000000000Z, stop: 2022-05-14T00:00:00.000000000Z}
 // ```
 //
 // ## Metadata
@@ -860,7 +866,8 @@ weekStart = (d,start_sunday=false) => {
   cur_day = weekDay(t:trunc)
   ws = if start_sunday then 0 else 1
   days_diff = scale(d:1d, n:(cur_day-ws))
-  return sub(d: days_diff, from: trunc)
+  starting = sub(d: days_diff, from: trunc)
+  return {start: starting,  stop: add(d:1w, to: starting)}
 }
 
 

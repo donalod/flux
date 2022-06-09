@@ -4644,16 +4644,16 @@ toTime = (tables=<-) => tables |> map(fn: (r) => ({r with _value: time(v: r._val
 //
 today = () => date.truncate(t: now(), unit: 1d)
 
-// yesterday returns the timestamp of the today() with a day subtracted from it.
+// yesterday finds the starting and stopping point of yesterday truncated to the day.
 //
 // ## Examples
 //
-// ### Return a timestamp representing yesterday
+// ### Returns a recording containing the timestamp of the start and the stopping point of yesterday
 // ```no_run
 // option now = () => 2022-01-02T13:45:28Z
 //
 // yesterday()
-// // Returns 2022-01-01T00:00:00.000000000Z
+// // Returns {start: 2022-01-01T00:00:00.000000000Z, stop: 2022-01-02T00:00:00.000000000Z}
 // ```
 //
 // ### Query data from yesterday
@@ -4666,4 +4666,7 @@ today = () => date.truncate(t: now(), unit: 1d)
 // introduced: NEXT
 // tags: date/time
 
-yesterday = () => date.sub(d:1d, from:today())
+yesterday = () => {
+    ret = {start: (date.sub(d:1d, from:today())), stop: today()}
+    return ret
+}
