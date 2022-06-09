@@ -142,7 +142,14 @@ func createJoinTransformation(
 	spec plan.ProcedureSpec,
 	a execute.Administration,
 ) (execute.Transformation, execute.Dataset, error) {
-	t, err := NewMergeJoinTransformation(id, spec, a)
+	t, err := NewMergeJoinTransformation(
+		a.Context(),
+		id,
+		spec,
+		a.Parents()[0],
+		a.Parents()[1],
+		a.Allocator(),
+	)
 	if err != nil {
 		return nil, nil, err
 	}

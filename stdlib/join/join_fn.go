@@ -92,9 +92,9 @@ func (f *JoinFn) Eval(ctx context.Context, p *joinProduct, method string, mem me
 		groupKey := p.right[0].Key()
 		defaultRow := defaultRow(groupKey, f.leftType())
 		cols := colsFromObjectType(f.leftType())
-		b := newChunkBuilder(cols, 1, mem)
-		b.appendRecord(defaultRow)
-		c := b.build(groupKey)
+		b := NewChunkBuilder(cols, 1, mem)
+		b.AppendRecord(defaultRow)
+		c := b.Build(groupKey)
 		p.left = append(p.left, c)
 	} else if p.right.nrows() < 1 {
 		if method == "inner" || method == "right" {
@@ -103,9 +103,9 @@ func (f *JoinFn) Eval(ctx context.Context, p *joinProduct, method string, mem me
 		groupKey := p.left[0].Key()
 		defaultRow := defaultRow(groupKey, f.rightType())
 		cols := colsFromObjectType(f.rightType())
-		b := newChunkBuilder(cols, 1, mem)
-		b.appendRecord(defaultRow)
-		c := b.build(groupKey)
+		b := NewChunkBuilder(cols, 1, mem)
+		b.AppendRecord(defaultRow)
+		c := b.Build(groupKey)
 		p.right = append(p.right, c)
 	}
 	c, err := f.crossProduct(ctx, p, mem)
@@ -133,12 +133,12 @@ func (f *JoinFn) crossProduct(ctx context.Context, p *joinProduct, mem memory.Al
 					return nil, err
 				}
 				f.schema = cols
-				builder = newChunkBuilder(cols, p.left.nrows()*p.right.nrows(), mem)
+				builder = NewChunkBuilder(cols, p.left.nrows()*p.right.nrows(), mem)
 			}
-			builder.appendRecord(joined)
+			builder.AppendRecord(joined)
 		}
 	}
-	c := builder.build(p.left[0].Key())
+	c := builder.Build(p.left[0].Key())
 	return &c, nil
 }
 
@@ -217,7 +217,9 @@ func (f *JoinFn) eval(ctx context.Context, l, r values.Object) (values.Object, e
 	if err != nil {
 		return nil, err
 	}
-	return joined.Object(), nil
+	obj := joined.Object()
+	// fmt.Printf("evaluated row %v\n", obj)
+	return obj, nil
 }
 
 func (f *JoinFn) Type() semantic.MonoType {

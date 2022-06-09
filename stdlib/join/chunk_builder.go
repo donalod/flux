@@ -16,7 +16,7 @@ type chunkBuilder struct {
 	builders []array.Builder
 }
 
-func newChunkBuilder(cols []flux.ColMeta, size int, mem memory.Allocator) *chunkBuilder {
+func NewChunkBuilder(cols []flux.ColMeta, size int, mem memory.Allocator) *chunkBuilder {
 	builders := make([]array.Builder, len(cols))
 	for i, col := range cols {
 		b := arrow.NewBuilder(col.Type, mem)
@@ -26,7 +26,7 @@ func newChunkBuilder(cols []flux.ColMeta, size int, mem memory.Allocator) *chunk
 	return &chunkBuilder{cols: cols, builders: builders}
 }
 
-func (b *chunkBuilder) appendRecord(record values.Object) error {
+func (b *chunkBuilder) AppendRecord(record values.Object) error {
 	for i, col := range b.cols {
 		v, ok := record.Get(col.Label)
 		if !ok {
@@ -39,7 +39,7 @@ func (b *chunkBuilder) appendRecord(record values.Object) error {
 	return nil
 }
 
-func (b *chunkBuilder) build(key flux.GroupKey) table.Chunk {
+func (b *chunkBuilder) Build(key flux.GroupKey) table.Chunk {
 	buf := arrow.TableBuffer{
 		GroupKey: key,
 		Columns:  b.cols,

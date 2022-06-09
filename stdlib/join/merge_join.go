@@ -38,25 +38,31 @@ type MergeJoinTransformation struct {
 }
 
 func NewMergeJoinTransformation(
+	ctx context.Context,
 	id execute.DatasetID,
 	s plan.ProcedureSpec,
-	a execute.Administration,
+	leftID execute.DatasetID,
+	rightID execute.DatasetID,
+	mem memory.Allocator,
 ) (*MergeJoinTransformation, error) {
 	spec, ok := s.(*SortMergeJoinProcedureSpec)
 	if !ok {
 		return nil, errors.New(codes.Internal, "unsupported join spec - not a sortMergeJoin")
 	}
-	mem := a.Allocator()
 	return &MergeJoinTransformation{
-		ctx:    a.Context(),
+		ctx:    ctx,
 		on:     spec.On,
 		as:     NewJoinFn(spec.As),
-		left:   a.Parents()[0],
-		right:  a.Parents()[1],
+		left:   leftID,
+		right:  rightID,
 		method: spec.Method,
 		d:      execute.NewTransportDataset(id, mem),
 		mem:    mem,
 	}, nil
+}
+
+func (t *MergeJoinTransformation) Dataset() *execute.TransportDataset {
+	return t.d
 }
 
 func (t *MergeJoinTransformation) ProcessMessage(m execute.Message) error {
@@ -158,14 +164,19 @@ func (t *MergeJoinTransformation) processChunk(chunk table.Chunk, state interfac
 		return s, true, errors.New(codes.Internal, "invalid chunk passed to join - dataset id is neither left nor right")
 	}
 
-	t.mergeJoin(chunk, s, isLeft)
+	if err := t.mergeJoin(chunk, s, isLeft); err != nil {
+		return s, true, err
+	}
 
 	return s, true, nil
 }
 
 func (t *MergeJoinTransformation) mergeJoin(chunk table.Chunk, s *joinState, isLeft bool) error {
 	for {
-		key, rows := s.merge(chunk, isLeft, t.on)
+		key, rows, err := s.scanKey(chunk, isLeft, t.on)
+		if err != nil {
+			return err
+		}
 		if key == nil {
 			break
 		}
@@ -220,19 +231,27 @@ type joinState struct {
 	products    []joinProduct
 }
 
-// merge passes the chunk to the appropriate side of the transformation, sets
+// scanKey passes the chunk to the appropriate side of the transformation, sets
 // the join key columns if they're not already set, and returns the output of scan()
-func (s *joinState) merge(c table.Chunk, isLeft bool, on []ColumnPair) (*joinKey, joinRows) {
+func (s *joinState) scanKey(c table.Chunk, isLeft bool, on []ColumnPair) (*joinKey, joinRows, error) {
 	if isLeft {
 		if len(s.left.joinKeyCols) < 1 {
-			s.left.setJoinKeyCols(getJoinKeyCols(on, isLeft), c)
+			if err := s.left.setJoinKeyCols(getJoinKeyCols(on, isLeft), c); err != nil {
+				return nil, nil, errors.Newf(codes.Invalid,
+					"cannot set join columns in left table stream: %s", err)
+			}
 		}
-		return s.left.scan(c)
+		key, rows := s.left.scan(c)
+		return key, rows, nil
 	} else {
 		if len(s.right.joinKeyCols) < 1 {
-			s.right.setJoinKeyCols(getJoinKeyCols(on, isLeft), c)
+			if err := s.right.setJoinKeyCols(getJoinKeyCols(on, isLeft), c); err != nil {
+				return nil, nil, errors.Newf(codes.Invalid,
+					"cannot set join columns in right table stream: %s", err)
+			}
 		}
-		return s.right.scan(c)
+		key, rows := s.right.scan(c)
+		return key, rows, nil
 	}
 }
 
@@ -323,7 +342,13 @@ func (s *joinState) insert(key *joinKey, rows joinRows, isLeft bool) (int, bool)
 	return position, canJoin
 }
 
-func (s *joinState) join(ctx context.Context, method string, fn *JoinFn, joinable int, mem memory.Allocator) ([]table.Chunk, error) {
+func (s *joinState) join(
+	ctx context.Context,
+	method string,
+	fn *JoinFn,
+	joinable int,
+	mem memory.Allocator,
+) ([]table.Chunk, error) {
 	if fn.compiled == nil {
 		err := fn.Prepare(s.left.schema, s.right.schema)
 		if err != nil {
@@ -353,18 +378,24 @@ func (s *joinState) finished() bool {
 type sideState struct {
 	schema      []flux.ColMeta
 	joinKeyCols []flux.ColMeta
+	currentKey  joinKey
 	chunks      []table.Chunk
 	keyStart    int
 	keyEnd      int
 	done        bool
 }
 
-func (s *sideState) setJoinKeyCols(labels []string, c table.Chunk) {
+func (s *sideState) setJoinKeyCols(labels []string, c table.Chunk) error {
 	cols := make([]flux.ColMeta, 0, len(labels))
 	for _, label := range labels {
-		cols = append(cols, c.Col(c.Index(label)))
+		colIdx := c.Index(label)
+		if colIdx < 0 {
+			return errors.Newf(codes.Invalid, "table is missing column '%s'", label)
+		}
+		cols = append(cols, c.Col(colIdx))
 	}
 	s.joinKeyCols = cols
+	return nil
 }
 
 // scan calls and handles the outputs of advance(). If advance reports that it
@@ -388,9 +419,15 @@ func (s *sideState) addChunk(c table.Chunk) {
 // reaches the end of the chunk. Returns true if it finds the end of a join key,
 // along with the key itself.
 func (s *sideState) advance(c table.Chunk) (*joinKey, bool) {
-	startKey := joinKeyFromRow(s.joinKeyCols, c, s.keyEnd)
-	s.keyStart = s.keyEnd
-	s.keyEnd++
+	var startKey joinKey
+	if len(s.chunks) > 0 {
+		startKey = s.currentKey
+		s.keyStart = s.keyEnd
+	} else {
+		startKey = joinKeyFromRow(s.joinKeyCols, c, s.keyEnd)
+		s.keyStart = s.keyEnd
+		s.keyEnd++
+	}
 
 	complete := false
 	for ; s.keyEnd < c.Len(); s.keyEnd++ {
@@ -405,6 +442,7 @@ func (s *sideState) advance(c table.Chunk) (*joinKey, bool) {
 	// We hit the end of the chunk without finding a new join key.
 	// Reset keyEnd to 0 since the next thing we process will be a new chunk.
 	if !complete {
+		s.currentKey = startKey
 		s.keyEnd = 0
 	}
 
