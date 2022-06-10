@@ -4795,18 +4795,18 @@ month = () => {
 // ### Find the timestamps for the start and end of that week with the week starting on Monday
 //
 // ```no_run
-// import "date"
-//
-// d = date.week()
+// 
+// option now = () => 2022-05-10T00:00:00.000010000Z
+// d = week()
 //
 // // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
 // ```
 // ### Find the timestamps for the start and end of that week with the week starting on Sunday 
 // 
 // ```no_run
-// import "date"
+// 
 //  option now = () => d: 2022-05-10T10:10:00Z
-// d = date.weel(start_sunday:true)
+// d = week(start_sunday:true)
 //
 // // Returns {start: 2022-05-08T00:00:00.000000000Z, stop: 2022-05-14T00:00:00.000000000Z}
 // ```
