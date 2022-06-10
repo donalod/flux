@@ -4811,7 +4811,7 @@ month = () => {
 //
 // ```no_run
 //
-//  option now = () => d: 2022-05-10T10:10:00Z
+//  option now = () => 2022-05-10T10:10:00Z
 // d = week(start_sunday:true)
 //
 // // Returns {start: 2022-05-08T00:00:00.000000000Z, stop: 2022-05-14T00:00:00.000000000Z}
