@@ -4666,64 +4666,70 @@ today = () => date.truncate(t: now(), unit: 1d)
 // ## Metadata
 // introduced: NEXT
 // tags: date/time
-
 yesterday = () => {
-    ret = {start: (date.sub(d:1d, from:today())), stop: today()}
+    ret = {start: date.sub(d: 1d, from: today()), stop: today()}
+
     return ret
 }
 
-
 // Monday-Sunday will return the a record containing the start and the end of the last one of these days
 // ## Parameters
-// 
+//
 //
 // ## Examples
 //
-// ### Find the Monday of that week 
+// ### Find the Monday of that week
 //
 // ```no_run
-// 
+//
 // option now = () => 2022-05-09T12:00:00.000001000Z
 // monday()
-// ``` 
+// ```
 //
 // // Returns {start: 2022-05-08T00:00:00.000000000Z, stop:2022-05-09T00:00:00.000000000Z }
 // ```
-// 
+//
 // ### Filter by the records taken in a day
 // ```no_run
 // ret = tuesday()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
-// ``` 
-// 
-// This will return all records from tuesday this week 
+// ```
+//
+// This will return all records from tuesday this week
 //
 // ## Metadata
 // tags: date/time
-// 
-
+//
 //in target date
 _day_finder = (td, func) => {
     today_date = today()
     cur_day = date.weekDay(t: today_date)
-    
-    val = if cur_day == date.Sunday then 7-td 
-    else if td >= cur_day then 7-(td-cur_day)   
-    else (cur_day - td)
 
-    scaled_offset = if cur_day == td then date.scale(d:1w, n: 1)  
-    else date.scale(d: 1d, n: val)
-    
-    day_calc =  date.sub(d: scaled_offset, from: today_date)
+    val =
+        if cur_day == date.Sunday then
+            7 - td
+        else if td >= cur_day then
+            7 - (td - cur_day)
+        else
+            cur_day - td
+
+    scaled_offset =
+        if cur_day == td then
+            date.scale(d: 1w, n: 1)
+        else
+            date.scale(d: 1d, n: val)
+
+    day_calc = date.sub(d: scaled_offset, from: today_date)
+
     return func(s: day_calc)
 }
 
-_day_formatter = (s) =>{
+_day_formatter = (s) => {
     return {start: s, stop: date.add(d: 1d, to: s)}
 }
 
-_week_formatter = (s) =>{
+_week_formatter = (s) => {
     return {start: s, stop: date.add(d: 1w, to: s)}
 }
 
@@ -4749,8 +4755,6 @@ sunday = () => {
     return _day_finder(td: date.Sunday, func: _day_formatter)
 }
 
-
-
 // month will return the timestamps of the start and end of the month in a record
 // ## Parameters
 // - d: Timestamp to find the months start for.
@@ -4760,29 +4764,28 @@ sunday = () => {
 // ### Find the timestamps for the start and stopping point of that month
 //
 // ```no_run
-// 
+//
 //
 // date.month(d: 2022-05-10T10:10:00Z)
 //
 // // Returns {start:2022-05-01T00:00:00.000000000Z, stop:2022-06-01T00:00:00.000000000Z}
-// 
+//
 //
 // ```no_run
 // ret = month()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
-// 
+//
 // This will return all records from this month
 //
 // ## Metadata
 // tags: date/time
-// 
+//
 month = () => {
-  start = date.truncate(t: today(), unit: 1mo)  
-  return {start: start, stop: date.add(d:1mo, to: start)}
+    start = date.truncate(t: today(), unit: 1mo)
+
+    return {start: start, stop: date.add(d: 1mo, to: start)}
 }
-
-
 
 //week
 // week will return the timestamps of the week start of a given timestamp truncated to the day and the ending point of that week
@@ -4795,16 +4798,16 @@ month = () => {
 // ### Find the timestamps for the start and end of that week with the week starting on Monday
 //
 // ```no_run
-// 
+//
 // option now = () => 2022-05-10T00:00:00.000010000Z
 // d = week()
 //
 // // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
 // ```
-// ### Find the timestamps for the start and end of that week with the week starting on Sunday 
-// 
+// ### Find the timestamps for the start and end of that week with the week starting on Sunday
+//
 // ```no_run
-// 
+//
 //  option now = () => d: 2022-05-10T10:10:00Z
 // d = week(start_sunday:true)
 //
@@ -4816,14 +4819,17 @@ month = () => {
 // ret = week()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
-// 
+//
 // This will return all records from this week
 //
 //
 // ## Metadata
 // tags: date/time
-// 
+//
 week = (start_sunday=false) => {
-  return (if start_sunday then _day_finder(td: date.Sunday, func: _week_formatter ) 
-  else _day_finder(td: date.Monday, func: _week_formatter  ) )
+    return
+        if start_sunday then
+            _day_finder(td: date.Sunday, func: _week_formatter)
+        else
+            _day_finder(td: date.Monday, func: _week_formatter)
 }
