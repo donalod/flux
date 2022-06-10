@@ -4684,9 +4684,10 @@ yesterday = () => {
 //
 // option now = () => 2022-05-09T12:00:00.000001000Z
 // monday()
+//
+// Returns {start: 2022-05-08T00:00:00.000000000Z, stop:2022-05-09T00:00:00.000000000Z }
 // ```
 //
-// // Returns {start: 2022-05-08T00:00:00.000000000Z, stop:2022-05-09T00:00:00.000000000Z }
 // ```
 //
 // ### Filter by the records taken in a day
@@ -4769,12 +4770,13 @@ sunday = () => {
 // date.month(d: 2022-05-10T10:10:00Z)
 //
 // // Returns {start:2022-05-01T00:00:00.000000000Z, stop:2022-06-01T00:00:00.000000000Z}
-//
+// ```
 //
 // ```no_run
 // ret = month()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
+// ```
 //
 // This will return all records from this month
 //
@@ -4801,9 +4803,10 @@ month = () => {
 //
 // option now = () => 2022-05-10T00:00:00.000010000Z
 // d = week()
-//
+// 
 // // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
 // ```
+//
 // ### Find the timestamps for the start and end of that week with the week starting on Sunday
 //
 // ```no_run
