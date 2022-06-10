@@ -27,7 +27,7 @@ testcase yesterday_test {
 
 testcase week_start_default_sunday_test {
     option now = () => 2022-06-06T10:02:10Z
-    ret = weekStart(start_sunday: true)
+    ret = week(start_sunday: true)
 
     want = array.from(rows: [{_value_a: 2022-06-05T00:00:00Z, _value_b: 2022-06-12T00:00:00Z}])
     got = array.from(rows: [{_value_a: ret.start, _value_b: ret.stop}])
@@ -37,7 +37,7 @@ testcase week_start_default_sunday_test {
 
 testcase week_start_default_monday_test {
     option now = () => 2022-06-08T14:20:11Z
-    ret = weekStart(start_sunday:false)
+    ret = week(start_sunday:false)
 
     want = array.from(rows: [{_value_a: 2022-06-06T00:00:00Z, _value_b: 2022-06-13T00:00:00Z}])
     got = array.from(rows: [{_value_a: ret.start, _value_b: ret.stop}])
@@ -48,7 +48,7 @@ testcase week_start_default_monday_test {
 
 testcase  month_start_one_test {
     option now = () => 2021-03-10T22:10:00Z
-    ret = monthStart()
+    ret = month()
 
     want = array.from(rows: [{_value_a: 2021-03-01T00:00:00Z, _value_b: 2021-04-01T00:00:00Z }])
     got = array.from(rows: [{_value_a: ret.start, _value_b: ret.stop}])
@@ -58,7 +58,7 @@ testcase  month_start_one_test {
 
 testcase month_start_two_test {
     option now = () => 2020-12-10T22:10:00Z
-    ret = monthStart()
+    ret = month()
 
     want = array.from(rows: [{_value_a: 2020-12-01T00:00:00Z, _value_b: 2021-01-01T00:00:00Z }])
     got = array.from(rows: [{_value_a: ret.start, _value_b: ret.stop }])

@@ -4751,7 +4751,7 @@ sunday = () => {
 
 
 
-// monthStart will return the timestamps of the start and end of the month in a record
+// month will return the timestamps of the start and end of the month in a record
 // ## Parameters
 // - d: Timestamp to find the months start for.
 //
@@ -4762,13 +4762,13 @@ sunday = () => {
 // ```no_run
 // 
 //
-// date.monthStart(d: 2022-05-10T10:10:00Z)
+// date.month(d: 2022-05-10T10:10:00Z)
 //
 // // Returns {start:2022-05-01T00:00:00.000000000Z, stop:2022-06-01T00:00:00.000000000Z}
 // 
 //
 // ```no_run
-// ret = monthStart()
+// ret = month()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
 // 
@@ -4777,7 +4777,7 @@ sunday = () => {
 // ## Metadata
 // tags: date/time
 // 
-monthStart = () => {
+month = () => {
   start = date.truncate(t: today(), unit: 1mo)  
   return {start: start, stop: date.add(d:1mo, to: start)}
 }
@@ -4785,7 +4785,7 @@ monthStart = () => {
 
 
 //week
-// weekStart will return the timestamps of the week start of a given timestamp truncated to the day and the ending point of that week
+// week will return the timestamps of the week start of a given timestamp truncated to the day and the ending point of that week
 // ## Parameters
 //
 // - start_sunday: Boolean to represent if the month starts on a Sunday or Monday (defaults on Monday)
@@ -4797,7 +4797,7 @@ monthStart = () => {
 // ```no_run
 // import "date"
 //
-// d = date.weekStart()
+// d = date.week()
 //
 // // Returns {start: 2022-05-09T00:00:00.000000000Z, stop: 2022-05-16T00:00:00.000000000Z}
 // ```
@@ -4806,14 +4806,14 @@ monthStart = () => {
 // ```no_run
 // import "date"
 //  option now = () => d: 2022-05-10T10:10:00Z
-// d = date.weekStart(start_sunday:true)
+// d = date.weel(start_sunday:true)
 //
 // // Returns {start: 2022-05-08T00:00:00.000000000Z, stop: 2022-05-14T00:00:00.000000000Z}
 // ```
 //
 // ### Example usage
 //// ```no_run
-// ret = weekStart()
+// ret = week()
 // from(bucket: "example-bucket")
 //     |> range(start: ret.start, stop: ret.stop)
 // 
@@ -4823,7 +4823,7 @@ monthStart = () => {
 // ## Metadata
 // tags: date/time
 // 
-weekStart = (start_sunday=false) => {
+week = (start_sunday=false) => {
   return (if start_sunday then _day_finder(td: date.Sunday, func: _week_formatter ) 
   else _day_finder(td: date.Monday, func: _week_formatter  ) )
 }
