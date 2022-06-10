@@ -44,7 +44,15 @@ func (i *ider) ID(t *flux.TableObject) flux.OperationID {
 	return tableID
 }
 
-func FromEvaluation(ctx context.Context, ses []interpreter.SideEffect, now time.Time) (*flux.Spec, error) {
+// FromEvaluation produces a spec from
+// TODO mention when skipYields should be used
+func FromEvaluation(
+	ctx context.Context,
+	ses []interpreter.SideEffect,
+	now time.Time,
+	// FIXME: skipYields is a misnomer. Better name needed.
+	skipYields bool,
+) (*flux.Spec, error) {
 	var nextNodeID *int
 	if value := ctx.Value(plan.NextPlanNodeIDKey); value != nil {
 		nextNodeID = value.(*int)
@@ -60,8 +68,13 @@ func FromEvaluation(ctx context.Context, ses []interpreter.SideEffect, now time.
 	seen := make(map[*flux.TableObject]bool)
 	objs := make([]*flux.TableObject, 0, len(ses))
 
+	sideEffectCount := 0 // FIXME: I think these would all be results in the end?
+
 	for _, se := range ses {
+
 		if op, ok := se.Value.(*flux.TableObject); ok {
+			sideEffectCount += 1
+			fmt.Printf("se op=%q\n", op.Kind)
 			s, cctx := opentracing.StartSpanFromContext(ctx, "toSpec")
 			s.SetTag("opKind", op.Kind)
 			if se.Node != nil {
@@ -69,20 +82,43 @@ func FromEvaluation(ctx context.Context, ses []interpreter.SideEffect, now time.
 			}
 
 			if !isDuplicateTableObject(cctx, op, objs) {
-				buildSpecWithTrace(cctx, op, ider, spec, seen)
+				buildSpecWithTrace(cctx, op, ider, spec, seen, skipYields)
 				objs = append(objs, op)
 			}
+
 			s.Finish()
 		}
 	}
 
+	resultCount := sideEffectCount
+	if sideEffectCount == 0 { // FIXME: this is wrong
+		resultCount = 1
+	}
+	fmt.Printf(
+		"\n\nresultCount=%d\nskipYields=%t\nspec=%s\n\n",
+		resultCount,
+		skipYields,
+		flux.Formatted(spec),
+	)
+
+	// When skipYields is true, we're running a sub-program (a la tableFind).
+	// In this case we ignore any yields but we also have an extra requirement:
+	// there can only be 1 result. This is to say, if there is not exactly 1
+	// operation, we error.
+	if skipYields && resultCount != 1 {
+		return nil,
+			errors.Newf(
+				codes.Invalid,
+				// TODO: should we report the skipped yields in this count?
+				"expected exactly 1 result from table stream, found %d", resultCount,
+			)
+	}
 	if len(spec.Operations) == 0 {
 		return nil,
 			errors.New(codes.Invalid,
 				"this Flux script returns no streaming data. "+
 					"Consider adding a \"yield\" or invoking streaming functions directly, without performing an assignment")
 	}
-
 	return spec, nil
 }
 
@@ -98,20 +134,31 @@ func isDuplicateTableObject(ctx context.Context, op *flux.TableObject, objs []*f
 	return false
 }
 
-func buildSpecWithTrace(ctx context.Context, t *flux.TableObject, ider flux.IDer, spec *flux.Spec, visited map[*flux.TableObject]bool) {
+func buildSpecWithTrace(ctx context.Context, t *flux.TableObject, ider flux.IDer, spec *flux.Spec, visited map[*flux.TableObject]bool, skipYields bool) {
 	s, _ := opentracing.StartSpanFromContext(ctx, "buildSpec")
 	s.SetTag("opKind", t.Kind)
-	buildSpec(t, ider, spec, visited)
+	buildSpec(t, ider, spec, visited, skipYields)
 	s.Finish()
 }
 
-func buildSpec(t *flux.TableObject, ider flux.IDer, spec *flux.Spec, visited map[*flux.TableObject]bool) {
+func buildSpec(t *flux.TableObject, ider flux.IDer, spec *flux.Spec, visited map[*flux.TableObject]bool, skipYields bool) {
 	// Traverse graph upwards to first unvisited node.
 	// Note: parents are sorted based on parameter name, so the visit order is consistent.
 	for _, p := range t.Parents {
+
 		if !visited[p] {
-			// recurse up parents
-			buildSpec(p, ider, spec, visited)
+			// FIXME: if the parent is a yield, go directly to the parent's parent?
+			if skipYields && p.Kind == "yield" {
+				for _, pp := range p.Parents {
+					if !visited[pp] {
+						// recurse up parents
+						buildSpec(pp, ider, spec, visited, skipYields)
+					}
+				}
+			} else {
+				// recurse up parents
+				buildSpec(p, ider, spec, visited, skipYields)
+			}
 		}
 	}
 
@@ -120,19 +167,32 @@ func buildSpec(t *flux.TableObject, ider flux.IDer, spec *flux.Spec, visited map
 
 	// Link table object to all parents after assigning ID.
 	for _, p := range t.Parents {
-		spec.Edges = append(spec.Edges, flux.Edge{
-			Parent: ider.ID(p),
-			Child:  tableID,
-		})
+		// FIXME: if the parent is a yield, go directly to the parent's parent?
+		if skipYields && p.Kind == "yield" {
+			for _, pp := range p.Parents {
+				spec.Edges = append(spec.Edges, flux.Edge{
+					Parent: ider.ID(pp),
+					Child:  tableID,
+				})
+			}
+		} else {
+			spec.Edges = append(spec.Edges, flux.Edge{
+				Parent: ider.ID(p),
+				Child:  tableID,
+			})
+		}
+
 	}
 
 	visited[t] = true
-	spec.Operations = append(spec.Operations, t.Operation(ider))
+	if !(skipYields && t.Kind == "yield") {
+		spec.Operations = append(spec.Operations, t.Operation(ider))
+	}
 }
 
 // FromTableObject returns a spec from a TableObject.
 func FromTableObject(ctx context.Context, to *flux.TableObject, now time.Time) (*flux.Spec, error) {
-	return FromEvaluation(ctx, []interpreter.SideEffect{{Value: to}}, now)
+	return FromEvaluation(ctx, []interpreter.SideEffect{{Value: to}}, now, true)
 }
 
 // FromScript returns a spec from a script expressed as a raw string.
@@ -167,5 +227,5 @@ func FromScript(ctx context.Context, runtime flux.Runtime, now time.Time, script
 		return nil, err
 	}
 
-	return FromEvaluation(cctx, sideEffects, nowTime.Time().Time())
+	return FromEvaluation(cctx, sideEffects, nowTime.Time().Time(), false)
 }
